@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2f2f7">
+  <title>CHUJLE / CIPLE — gry słowne</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #1d1d1f;
+      background: #f2f2f7;
+      font-synthesis: none;
+      --glass: rgba(255, 255, 255, .66);
+      --line: rgba(255, 255, 255, .82);
+      --shadow: 0 12px 36px rgba(31, 39, 61, .075), inset 0 1px 1px rgba(255, 255, 255, .95);
+      --muted: #777984;
+      --accent: #6658d9;
+      --spring: cubic-bezier(.34, 1.56, .64, 1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      background-color: #f2f2f7;
+      background-image:
+        radial-gradient(ellipse at 12% 4%, rgba(166, 192, 255, .28), transparent 34rem),
+        radial-gradient(ellipse at 90% 44%, rgba(220, 204, 255, .21), transparent 32rem),
+        linear-gradient(rgba(36, 44, 67, .038) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(36, 44, 67, .038) 1px, transparent 1px);
+      background-size: auto, auto, 40px 40px, 40px 40px;
+      background-attachment: fixed;
+    }
+    button { font: inherit; color: inherit; }
+    .app-shell { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 54px; }
+    .topline { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 48px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      display: grid; width: 42px; height: 42px; place-items: center; border-radius: 15px;
+      background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(233,231,255,.7));
+      border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--accent); font-weight: 900;
+    }
+    .brand-name { font-size: 15px; font-weight: 800; letter-spacing: -.045em; }
+    .brand-sub { margin-top: 2px; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+    .status-pill, .glass-card, .tabbar, .action-button, .key {
+      background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--line); box-shadow: var(--shadow);
+    }
+    .status-pill { padding: 10px 15px; border-radius: 999px; font-size: 12px; color: #565966; }
+    .hero { text-align: center; margin: 0 auto 30px; }
+    .eyebrow { color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { margin: 7px 0 8px; font-size: clamp(42px, 8vw, 72px); line-height: .98; letter-spacing: -.075em; font-weight: 850; }
+    .hero p { margin: 0; color: var(--muted); font-size: 15px; }
+    .tabbar {
+      position: relative; display: flex; width: min(370px, 100%); margin: 0 auto 28px; padding: 5px;
+      border-radius: 999px; isolation: isolate;
+    }
+    .tab-indicator {
+      position: absolute; z-index: -1; top: 5px; bottom: 5px; left: 5px; width: calc(50% - 5px);
+      border-radius: 999px; background: rgba(255,255,255,.91); box-shadow: 0 3px 12px rgba(39, 40, 64, .1), inset 0 1px 1px white;
+      transition: transform .48s var(--spring);
+    }
+    .tabbar[data-active="ciple"] .tab-indicator { transform: translateX(100%); }
+    .tab {
+      flex: 1; min-height: 43px; border: 0; background: transparent; border-radius: 999px; cursor: pointer;
+      color: #777984; font-size: 12px; font-weight: 800; letter-spacing: .08em; transition: color .2s ease, transform .15s ease;
+    }
+    .tab[aria-selected="true"] { color: #24232d; }
+    .tab:active, .action-button:active, .key:active { transform: scale(.96); }
+    .game-panel { display: none; }
+    .game-panel.active { display: block; animation: panel-in .4s var(--spring) both; }
+    @keyframes panel-in { from { opacity: 0; transform: translateY(9px) scale(.99); } to { opacity: 1; transform: none; } }
+    .game-grid { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 18px; align-items: start; }
+    .glass-card { border-radius: 27px; }
+    .board-card { min-height: 460px; padding: 27px; }
+    .side-card { padding: 23px; }
+    .game-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+    .game-heading h2 { margin: 0; font-size: 20px; letter-spacing: -.045em; }
+    .game-heading p { max-width: 480px; margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .round-number { color: #9698a3; font-size: 11px; font-weight: 750; letter-spacing: .08em; white-space: nowrap; }
+    .ladder-track { display: flex; flex-direction: column; align-items: center; gap: 9px; margin: 25px auto 18px; }
+    .ladder-word { display: flex; gap: 7px; animation: tile-in .42s var(--spring) both; }
+    .ladder-word.current .tile { border-color: rgba(102,88,217,.3); box-shadow: 0 4px 16px rgba(102,88,217,.13), inset 0 1px 1px white; }
+    .ladder-word.solved .tile { background: rgba(73, 179, 127, .19); border-color: rgba(73,179,127,.23); }
+    .ladder-word.start .tile { background: rgba(102,88,217,.11); }
+    @keyframes tile-in { from { opacity: 0; transform: translateY(12px) scale(.88); } to { opacity: 1; transform: none; } }
+    .tile {
+      display: grid; width: 44px; height: 47px; place-items: center; border-radius: 13px; border: 1px solid rgba(255,255,255,.95);
+      background: rgba(255,255,255,.7); box-shadow: 0 4px 14px rgba(36,43,65,.055), inset 0 1px 1px white;
+      font-size: 22px; font-weight: 800; letter-spacing: -.04em;
+    }
+    .ladder-arrow { color: #aaaab4; font-size: 14px; line-height: 8px; }
+    .entry-wrap { width: min(420px, 100%); margin: 0 auto; }
+    .entry-label { display: flex; justify-content: space-between; margin: 0 2px 8px; color: var(--muted); font-size: 11px; }
+    .entry-row { display: flex; gap: 9px; }
+    .word-input {
+      min-width: 0; flex: 1; height: 49px; padding: 0 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,.95);
+      outline: none; background: rgba(255,255,255,.71); box-shadow: inset 0 2px 5px rgba(30,34,52,.035);
+      font: inherit; font-size: 18px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase;
+    }
+    .word-input:focus { border-color: rgba(102,88,217,.45); box-shadow: 0 0 0 3px rgba(102,88,217,.1), inset 0 2px 5px rgba(30,34,52,.035); }
+    .action-button { min-height: 44px; padding: 0 19px; border-radius: 15px; cursor: pointer; font-size: 12px; font-weight: 800; transition: transform .15s ease, background .2s ease; }
+    .action-button.primary { border-color: transparent; background: linear-gradient(135deg, #7668e4, #5c50c4); box-shadow: 0 7px 17px rgba(92,80,196,.23); color: white; }
+    .action-button.small { min-height: 37px; padding: 0 13px; border-radius: 13px; font-size: 11px; }
+    .helper-line { min-height: 18px; margin: 9px 2px 0; color: var(--muted); font-size: 11px; }
+    .helper-line.error { color: #c64d58; }
+    .helper-line.success { color: #31875e; }
+    .section-label { margin-bottom: 12px; color: #888a95; font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    .stat-row { display: flex; justify-content: space-between; gap: 10px; padding: 12px 0; border-top: 1px solid rgba(79,79,99,.09); font-size: 12px; }
+    .stat-row span { color: var(--muted); }
+    .stat-row strong { text-align: right; }
+    .tip { margin-top: 15px; padding: 13px; border-radius: 16px; background: rgba(102,88,217,.07); color: #55516f; font-size: 11px; line-height: 1.55; }
+    .side-actions { display: flex; gap: 8px; margin-top: 18px; }
+    .side-actions .action-button { flex: 1; padding-inline: 8px; }
+    .keyboard { display: grid; gap: 7px; width: min(610px, 100%); margin: 20px auto 0; }
+    .key-row { display: flex; justify-content: center; gap: 5px; }
+    .key {
+      min-width: 0; flex: 1; height: 42px; padding: 0 5px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 750;
+      transition: transform .14s ease, background .2s ease, color .2s ease;
+    }
+    .key.wide { flex: 1.55; font-size: 10px; }
+    .key.green { background: #62af80; color: white; border-color: rgba(255,255,255,.35); }
+    .key.yellow { background: #d7ad52; color: white; border-color: rgba(255,255,255,.35); }
+    .key.gray { background: #9699a3; color: white; border-color: rgba(255,255,255,.35); }
+    .ciple-board { display: grid; gap: 7px; width: fit-content; max-width: 100%; margin: 23px auto 0; }
+    .guess-row { display: flex; justify-content: center; gap: 6px; }
+    .guess-tile {
+      display: grid; width: 46px; height: 46px; place-items: center; border-radius: 12px; border: 1px solid rgba(255,255,255,.96);
+      background: rgba(255,255,255,.57); box-shadow: inset 0 1px 1px white; font-size: 19px; font-weight: 800;
+      transition: transform .48s var(--spring), background .32s ease, color .32s ease, border-color .32s ease;
+    }
+    .guess-tile.filled { border-color: rgba(102,88,217,.33); animation: tile-pop .2s var(--spring); }
+    @keyframes tile-pop { from { transform: scale(.85); } to { transform: scale(1); } }
+    .guess-tile.reveal { transform: rotateX(360deg); }
+    .guess-tile.correct { background: #59aa78; border-color: #59aa78; color: white; }
+    .guess-tile.present { background: #d5aa4a; border-color: #d5aa4a; color: white; }
+    .guess-tile.absent { background: #989aa3; border-color: #989aa3; color: white; }
+    .ciple-meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; color: var(--muted); font-size: 11px; }
+    .ciple-entry { display: none; }
+    .notice { position: fixed; z-index: 5; left: 50%; bottom: 24px; max-width: calc(100vw - 32px); padding: 12px 17px; border: 1px solid var(--line); border-radius: 16px;
+      background: rgba(35,35,43,.86); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 12px 35px rgba(20,20,30,.19);
+      color: white; font-size: 12px; font-weight: 650; text-align: center; opacity: 0; pointer-events: none; transform: translate(-50%, 12px);
+      transition: opacity .2s ease, transform .25s var(--spring); }
+    .notice.show { opacity: 1; transform: translate(-50%, 0); }
+    .shake { animation: shake .36s ease both; }
+    @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+    .footer-note { padding-top: 22px; text-align: center; color: #999ba5; font-size: 10px; }
+    @media (max-width: 760px) {
+      .app-shell { width: min(100% - 24px, 560px); padding: 20px 0 35px; }
+      .topline { margin-bottom: 34px; }
+      .status-pill { font-size: 10px; padding: 8px 11px; }
+      .game-grid { grid-template-columns: 1fr; }
+      .board-card { min-height: auto; padding: 21px 14px; }
+      .side-card { padding: 18px; }
+      .side-card .tip { margin-top: 10px; }
+      .side-card .section-label { margin-bottom: 6px; }
+      .side-card .stat-row { padding: 9px 0; }
+      .side-card .side-actions { margin-top: 12px; }
+      .guess-tile { width: min(10vw, 44px); height: min(10vw, 44px); border-radius: 10px; }
+      .key { height: 40px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topline">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">Ł</div>
+        <div><div class="brand-name">SŁOWNIE</div><div class="brand-sub">gry językowe</div></div>
+      </div>
+      <div class="status-pill">✦&nbsp; Dwie gry. Jedna klawiatura.</div>
+    </header>
+
+    <section class="hero" aria-live="polite">
+      <div class="eyebrow">Polski język, bez filtra</div>
+      <h1 id="hero-title">CHUJLE</h1>
+      <p id="hero-copy">Przeskakuj po słowach. Jedna litera na raz.</p>
+    </section>
+
+    <nav class="tabbar" id="tabbar" data-active="chujle" aria-label="Wybór gry" role="tablist">
+      <span class="tab-indicator" aria-hidden="true"></span>
+      <button class="tab" id="tab-chujle" role="tab" aria-selected="true" aria-controls="panel-chujle">CHUJLE</button>
+      <button class="tab" id="tab-ciple" role="tab" aria-selected="false" aria-controls="panel-ciple">CIPLE</button>
+    </nav>
+
+    <section class="game-panel active" id="panel-chujle" role="tabpanel" aria-labelledby="tab-chujle">
+      <div class="game-grid">
+        <div class="glass-card board-card">
+          <div class="game-heading">
+            <div><h2>Drabinka do CHUJ</h2><p>Zmieniaj dokładnie jedną literę. Każdy szczebel musi być słowem.</p></div>
+            <span class="round-number" id="ladder-round">RUNDA 01</span>
+          </div>
+          <div class="ladder-track" id="ladder-track" aria-live="polite"></div>
+          <form class="entry-wrap" id="ladder-form" autocomplete="off">
+            <label class="entry-label" for="ladder-input"><span>Twój następny krok</span><span>4 litery</span></label>
+            <div class="entry-row">
+              <input class="word-input" id="ladder-input" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Wpisz czteroliterowe słowo">
+              <button class="action-button primary" type="submit">Dalej&nbsp; ↗</button>
+            </div>
+            <div class="helper-line" id="ladder-message" aria-live="polite"></div>
+          </form>
+          <div class="keyboard" id="ladder-keyboard" aria-label="Klawiatura ekranowa"></div>
+        </div>
+        <aside class="glass-card side-card">
+          <div class="section-label">Twoja runda</div>
+          <div class="stat-row"><span>Start</span><strong id="ladder-start">—</strong></div>
+          <div class="stat-row"><span>Najkrótsza droga</span><strong id="ladder-optimal">—</strong></div>
+          <div class="stat-row"><span>Twoje kroki</span><strong id="ladder-steps">0</strong></div>
+          <div class="tip">Słownik obejmuje zwykłe polskie słowa. Skróty i własne nazwy nie przejdą — ale możesz wracać do już użytych słów.</div>
+          <div class="side-actions">
+            <button class="action-button small" id="ladder-hint" type="button">Podpowiedź</button>
+            <button class="action-button small" id="ladder-new" type="button">Nowa runda ↻</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="game-panel" id="panel-ciple" role="tabpanel" aria-labelledby="tab-ciple" hidden>
+      <div class="game-grid">
+        <div class="glass-card board-card">
+          <div class="game-heading">
+            <div><h2>Zgadnij hasło</h2><p>Masz sześć prób. Kolory podpowiedzą, gdzie kryje się rozwiązanie.</p></div>
+            <span class="round-number" id="ciple-round">RUNDA 01</span>
+          </div>
+          <div class="ciple-board" id="ciple-board" aria-label="Plansza zgadywania"></div>
+          <div class="ciple-meta"><span id="ciple-length">Hasło: — liter</span><span id="ciple-attempts">Próba 1 z 6</span></div>
+          <form class="entry-wrap ciple-entry" id="ciple-form" autocomplete="off">
+            <label class="entry-label" for="ciple-input"><span>Twoje hasło</span><span id="ciple-input-length">— liter</span></label>
+            <div class="entry-row">
+              <input class="word-input" id="ciple-input" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Wpisz swoje zgadywane słowo">
+              <button class="action-button primary" type="submit">Zgaduj&nbsp; ↗</button>
+            </div>
+            <div class="helper-line" id="ciple-message" aria-live="polite"></div>
+          </form>
+          <div class="keyboard" id="ciple-keyboard" aria-label="Klawiatura ekranowa"></div>
+        </div>
+        <aside class="glass-card side-card">
+          <div class="section-label">Jak grać</div>
+          <div class="stat-row"><span>🟩 Zielony</span><strong>Dobra litera, dobre miejsce</strong></div>
+          <div class="stat-row"><span>🟨 Żółty</span><strong>Dobra litera, złe miejsce</strong></div>
+          <div class="stat-row"><span>⬜ Szary</span><strong>Tej litery tu nie ma</strong></div>
+          <div class="tip">Wpisz dowolne słowo o właściwej długości — nie musisz znać go ze słownika. Cel może mieć od 4 do 8 liter.</div>
+          <div class="side-actions"><button class="action-button small" id="ciple-new" type="button">Nowe hasło ↻</button></div>
+        </aside>
+      </div>
+    </section>
+    <div class="footer-note">Małe słowa, wielkie emocje.</div>
+  </main>
+  <div class="notice" id="notice" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+    const DICT_CHUJLE = `
+      CHUJ CHUD CHAD CHAM CHAT CZAT CZAS CZAR CZAP CHÓD CHÓR CHÓW CHÓJ CHUT
+      ABBA ABCE ADAM ADAT AGAT AGRA AKTA AKTY ALBA ALBO ALEA ALFA ALGI ALKA
+      AMOR ANIO ANTY ARKA ASIA ATOM AUTO AZOT
+      BABA BACH BADA BAGA BAJA BAJA BAKI BALA BALI BANA BANI BANK BANS BARE
+      BARK BARS BARY BASA BAWA BAZA BEKA BEKS BETA BĘDZ BIBI BIEC BIEL BIJE
+      BILE BITY BIUR BLAD BLAT BLIK BLUZ BŁĄD BŁOT BODA BOKI BOLA BOMB BONA
+      BORA BORY BOSK BOTA BOYA BRAT BRUD BRUK BRUZ BRZE BRZY BUDA BUJA BUŁA
+      BUŁY BURA BURS BURY BUTA BUTY BYKI BYLA BYŁA BYŁO BYŁY
+      CAFE CARY CEGŁ CELA CENA CENT CERĘ CHAB CHAP CHAS CHÓR CIAŁ CIĄG CICH
+      CIEC CIEŃ CIOS CITO CIUP CLUE COFA COIL COKÓŁ COLA COŚK CUDZ CUKI CUKR
+      CUMA CUNA CUPA CYGA CYKL CYRK CZAP CZEK CZER CZES CZET CZUB CZUJ CZUM
+      CZUP CZUR CZUW
+      DACH DANE DANY DARE DARM DART DATA DAWA DAWĘ DAWN DAWY DECH DECY DEKA
+      DELA DEMO DĘBY DETA DĘTE DĘTY DINO DIWA DŁUG DŁUT DNO? DOBY DOCK DODA
+      DODĘ DODÓ DOKI DOKU DOLA DOLĘ DOLI DOLN DOŁA DOŁU DOMU DOMY DONA DONO
+      DORA DORĘ DORM DORY DOSY DOZA DOZY DRAB DRAK DRES DRUG DRUK DRUT DUMA
+      DUNY DUPE DUPA DURĄ DURO DUŻA DUŻE DUŻY DYCH DYMA DYWAN
+      EBON EDEN EDEN EKRĄ ECHO EFES EPOK ERKA ESÓW ETAP ETAT ETUI EURO EWAN
+      FALA FALE FALI FALĘ FAMĘ FANA FARA FART FASA FASE FATA FETA FILM FILY
+      FINA FION FIRM FIZY FLAK FLET FLIR FLIS FLOP FLUX FOKA FOLA FONI FORA
+      FORD FORĘ FORS FORT FOTO FOXY FRAC FRAJ FRAT FRET FRYZ FUGA FUKA FURA
+      FURĘ FURY FUSY FYRT
+      GALA GAŁA GAŁĘ GAŁY GAMA GARB GARD GARY GAZA GAZY GĘBA GĘSI GĘST GIBI
+      GIGA GILI GIPS GŁAZ GŁOS GŁÓD GŁUP GŁĄB GNAT GÓRA GÓRY GOLF GÓRE GRAJ
+      GRAB GRAD GRAF GRAM GRAN GRAS GRAT GRĄŻ GREK GRĘŻ GRID GRYZ GRZE GRZY
+      GUMA GUMĘ GUMY GUPA GUSŁ GUST GWAR GWAŁ GWIA
+      HAKI HAFT HAJD HALE HALA HALĘ HALI HALO HALS HAMAK HANA HARA HARE HARP
+      HART HASE HATA HATI HAWA HAZA HEJZ HEMO HENA HERA HERO HETA HITY HOBY
+      HOLA HOLA HORA HORY HOSS HOTA HRAB HUKI HULA HULI HUMA HUNA HURA HUTY
+      IGLA IGŁA IKRA IMBI INBA INNE INNI INNY IRYS ISKA ISKR ISLA ISŁA ITAK
+      JAGA JAKO JAMA JAPA JARA JARY JATA JAWA JAZZ JEGO JELE JEŚĆ JETY JĘKI
+      JODŁ JOGA JOKI JOLA JONY JOTA JUDO JUKI JUMA JURA JUTR JUTY
+      KABA KABL KACZ KADŁ KADR KAFE KAJA KAKA KALI KALK KAMI KANA KANU KAPA
+      KAPĘ KAPY KARA KARE KARI KARM KARO KART KARY KASA KASĘ KASY KATA KATĘ
+      KATY KAWA KAWĘ KAWY KĄPI KEBB KĘDY KĘSA KĘSY KIEL KIES KIJE KILO KIMA
+      KINA KINO KIOS KIPA KIRY KITA KITY KIWI KLAN KLAS KLAT KLEJ KLEP KLIK
+      KLON KŁAM KŁAP KŁĘB KŁOP KŁOS KŁUC KŁYK KNOT KOBY KOCĄ KOCĘ KOCI KOCY
+      KODY KOGI KOJA KOKA KOKI KOLA KOLĘ KOLI KOŁA KOŁO KOŁU KOMU KONA KOND
+      KOPA KOPĘ KOPY KORA KORE KORĘ KORY KOSA KOSĘ KOSY KOTA KOTY KOZA KOZĘ
+      KOZY KRAN KRAS KRAŚ KRAT KRAU KREM KRES KRET KREW KRĘG KRĘT KROK KRUP
+      KRZY KUBA KUBĘ KUBY KUKA KULA KULĘ KULI KULY KUMA KUPA KUPĘ KUPI KUPY
+      KURA KURĘ KURY KUSA KUSĘ KUSY KUŚY KUTA KUTE KUTY KUZA
+      LALA LAMA LAMP LARA LARY LATA LATĘ LATY LAVA LAWA LAWĘ LAWY LECH LEJE
+      LEKI LEKI LEMA LENA LETA LIGA LINI LIPA LIPĘ LIPY LIST LIŚĆ LIZA LIZĘ
+      LIZY LODY LOKI LOKU LOMA LONA LORĘ LORY LOTU LOTY LUBA LUBI LUDU LUDY
+      LUKA LUKĘ LUKI LUNA LUPA LUPĘ LUPY LURY ŁADA ŁADĘ ŁADY ŁAPA ŁAPĘ ŁAPY
+      ŁATA ŁATĘ ŁATY ŁAWA ŁAWĘ ŁAWY ŁĄKA ŁĄKĘ ŁĄKI ŁÓDK ŁÓŻK ŁUMA ŁUNA
+      MADA MADA MAJA MAJE MAKI MAKS MALA MALI MALĘ MALY MAMA MAMĘ MAMY MANA
+      MANĘ MANY MAPA MAPĘ MAPY MARA MARE MARI MARK MART MARY MASA MASĘ MASY
+      MATA MATĘ MATY MAZA MAZĘ MAZY MEGA MEKS MELA MĘKA MĘKĘ MĘKI MĘSK MIAŁ
+      MICA MIEC MIEL MIKA MIKI MILE MIŁA MIŁE MIŁO MIŁY MINA MINĘ MINY MIRA
+      MISA MISĘ MISY MITA MITO MITY MŁOT MŁÓT MNIE MOCĄ MOCĘ MOCI MOCY MODA
+      MODĘ MODY MOLA MOLĘ MOLI MORA MORE MORĘ MORY MOTA MOTĘ MOTY MOWA MOWĘ
+      MOWY MROK MRÓZ MULA MULĘ MULI MURK MURY MUTA MUTY MYCI MYJE MYKA MYLI
+      MYŁA MYŁO MYŁY MYTA MYTE MYTY
+      NADA NAKŁ NALA NALI NAMI NANA NAPA NAPĘ NAPY NARA NARY NASA NASĘ NASY
+      NATA NĘKA NĘKĘ NĘKI NETA NICA NICI NIDA NIKA NILA NINA NIOŁ NOGA NOGĘ
+      NOGI NOLA NORA NORĘ NORY NOSA NOSĘ NOSI NOSY NOTE NÓŻE NURA NURĘ NURY
+      NYSA
+      OAZA OBEJ OBIĆ OBIJ OBŁA OBŁĘ OBŁY OBRĘ OBRÓD OCHY OCZY ODAJ ODDA ODĘ
+      ODLE ODOM ODRY ODSY ODWA OFER OGAR OGIEŃ OKNO OKOP OKRA OKRY OLAĆ OLGA
+      OLIW OŁOW OMAW OMEN ONEJ ONGI OPAD OPAS OPIS OPRA ORKA ORKĘ ORKI ORLA
+      ORŁA ORŁY OSAJ OSAD OSIĘ OSKAR OŚKA OŚKI OŚLA OŚMY OŚMI OŚWI OTOŻ
+      PACH PADA PADŁ PAKA PAKĘ PAKI PAKT PALA PALĘ PALI PALL PALM PALU PANA
+      PANĘ PANI PANK PANT PAPA PAPĘ PAPY PARA PARĘ PARI PARĘ PARY PASA PASĘ
+      PASI PASY PATA PATĘ PATY PAWA PAWE PAWY PĄKI PĘKA PĘKĘ PĘKI PĘTO PĘTA
+      PEŁN PEŁT PERŁ PĘTA PĘTO PĘTY PIAK PICA PICĘ PICI PICO PIKA PIKĘ PIKI
+      PILE PILĘ PILI PILI PILN PIŁA PIŁĘ PIŁY PION PIOR PIPA PIPĘ PIPI PIPY
+      PISA PISĘ PISY PITA PITĘ PITY PIWO PIWĘ PIWY PŁAC PŁAT PŁOT PŁÓT PŁUC
+      PŁYN PŁYT PŁÓK POBI POCI POKI POKÓJ POKU POLA POLĘ POLI POŁA POŁĘ POŁY
+      POMA POMI PONA POPY PORA PORĘ PORĘ PORT PORY POSA POSE POSĘ POSY POTĘ
+      POTY POZA POZĘ POZY PRAC PRĄD PRĘT PRĘŻ PRĘG PROG PRÓG PRYS PRYZ PSIA
+      PSOT PTAS PUKA PUKĘ PUKI PULA PULĘ PULI PUMA PUNY PUPA PUPĘ PUPY PURA
+      PUSY PYTA PYTĘ PYTY
+      RABA RACE RACH RADA RADĘ RADY RAFA RAFĘ RAFY RAKA RAKĘ RAKI RANA RANĘ
+      RANI RANY RAPA RAPĘ RAPY RARA RASA RASĘ RASY RATA RATĘ RATY RAYA RAZA
+      RAZĘ RAZY REGA REJA REKI RĘKA RĘKĘ RĘKI RĘKU RIBA RICA RIGA RIKA RIMA
+      RING RIPA RITA RIVA RODU ROGI ROKU ROLĘ ROLI ROTA ROTĘ ROTY ROTA RÓŻA
+      RÓŻĘ RÓŻY RUCH RUDY RUGI RUJA RUJĘ RUJY RULA RUMY RUNA RUNĘ RUNY RURA
+      RURĘ RURY RUSA RUSĘ RUSY RUTA RUTĘ RUTY RYBA RYBĘ RYBY RYJE RYJA RYJE
+      RYKI RYSA RYSĘ RYSY RYTA RYTĘ RYTY RYWA
+      SAGA SAKI SAKO SALA SALĘ SALI SALO SALW SAMA SAMĄ SAME SAMI SAMO SAMY
+      SANA SANĘ SANY SARA SARĘ SARY SASA SASĘ SASY SATA SATĘ SATY SĄDŹ SĘKI
+      SEJM SEKS SENA SENĘ SENY SERA SERĘ SERY SĘPA SĘPY SETA SETĘ SETY SĘKI
+      SIAL SIEC SIĘG SIEK SIEŃ SIKA SIKĘ SIKI SIKA SILA SILĘ SILI SILO SINA
+      SINĘ SINY SIOŁ SIRA SIRĘ SIRY SKAL SKAN SKAR SKAT SKIN SKOK SKOT SKÓR
+      SKRY SKUB SŁAB SŁAW SŁOD SŁÓD SŁOW SŁÓW SŁUP SŁÓJ SŁÓW SMAR SMUG SNOE
+      SOBĄ SOFA SOFĘ SOFY SOKI SOKU SORA SORY SOWA SOWĘ SOWY SPAĆ SPAD SPAM
+      SPAS SPĘD SPIS SPOD SPÓD SPÓR SPÓŁ STAD STAL STAN STAS STÓŁ STUK STYK
+      SUKA SUKĘ SUKI SUKN SUMA SUMĘ SUMY SURA SURĘ SURY SUSA SUSĘ SUSY SUTA
+      SUTĘ SUTY SWAR SWĄD SWÓJ SWYM SYKI SYKU SYLA SYNA SYNĘ SYNY SZAB SZAK
+      SZAL SZAŁ SZAT SZCZ SZEF SZER SZOK SZOP SZUM SZYB SZYK
+      TABA TACA TACĘ TACY TAKA TAKĄ TAKĘ TAKI TAKO TAKS TALA TALĘ TALI TAMA
+      TAMĘ TAMY TANA TANĘ TANY TAPA TAPĘ TAPY TARA TARĘ TARY TATA TATĘ TATY
+      TAWA TEAT TEKA TEKĘ TEKI TELA TELĘ TELI TEMA TEMĘ TEMY TERA TERĘ TERY
+      TETA TĘGA TĘGI TĘGO TĘPA TĘPĄ TĘPE TĘPY TĘSK TINA TINA TIPA TIPĘ TIPY
+      TIRY TOLA TOLĘ TOLI TONA TONĘ TONI TONY TORA TORĘ TORY TOSA TOSĘ TOSY
+      TOTA TOTĘ TOTY TOYA TRAB TRAF TRAK TRAM TREN TRES TROP TRUP TRYB TRYK
+      TRZA TUJA TULĘ TULI TUNA TUNĘ TUNY TURA TURĘ TURY TUTA TUTĘ TUTY TYCI
+      TYJE TYKA TYKĘ TYKI TYLA TYLE TYŁA TYŁĘ TYŁY TYNA TYNE TYNK
+      UCHO UCIE UDAJ UDAŁ UDAR UJĄŁ UKAR UKŁA UKŁĘ UKŁY UKOI UKRY ULGA ULGĘ
+      ULGO UMIE UNIA UNIĘ UNII UNIO UPAŁ UPIĆ UPIJ UPIŁ UPIŁ UROK URWA URWĘ
+      URWY USZY USTA USTĘ USTY UTON UŻYĆ
+      WADA WADĘ WADY WAGA WAGĘ WAGI WALA WALĘ WALI WALT WARY WATA WATĘ WATY
+      WĄŻE WĄŻY WĄSA WĄSY WĄTĘ WĄTY WAZA WAZĘ WAZY WECZ WEGA WELA WĘDA WĘDĘ
+      WĘDY WĘKA WĘKĘ WĘKI WETA WETĘ WETY WĘZA WĘZĘ WĘZY WICA WICI WIDA WIDĘ
+      WIDY WIEK WIEŚ WILA WILĘ WILI WINA WINĘ WINY WIRA WIRĘ WIRY WITA WITĘ
+      WITY WŁAZ WŁÓK WODA WODĘ WODU WODY WOLA WOLĘ WOLI WOLU WORE WORY WOTA
+      WOTĘ WOTY WOZY WRÓG WROG WRÓT WUJA WUJĘ WUJE WUJO WUJK WULG WUNA
+      WYDA WYJE WYKA WYKĘ WYKI WYLE WYMY WYRA WYRĘ WYRY WZÓR
+      ZABI ZADA ZADĘ ZADY ZAGI ZALA ZALE ZALI ZAME ZAMI ZANA ZAPĘ ZAPY ZARA
+      ZARĘ ZARY ZASA ZASĘ ZASY ZATA ZATĘ ZATY ZAWA ZAWĘ ZAWY ZAZA ZAZĘ ZAZY
+      ZĘBA ZĘBĘ ZĘBY ZEGI ZELA ZELĘ ZELI ZERA ZERĘ ZERY ZETA ZETĘ ZETY ZIMA
+      ZIMĘ ZIMY ZINA ZINĘ ZINY ZISA ZISO ZITA ZITĘ ZITY ZIWA ZIWĘ ZIWY ZJEB
+      ZŁAŹ ZŁĄC ZŁÓŻ ZŁUD ZMÓW ZNAJ ZNAK ZNASZ ZNÓW ZONA ZONĘ ZONY ZORA ZORĘ
+      ZORY ZUPA ZUPĘ ZUPY ZWAL ZWĄC ZWĘŻ ZWÓJ
+    `.normalize("NFC").toUpperCase().split(/\s+/).filter(Boolean);
+
+    const DICT_CIPLE = `
+      CHUJ CHUJA CHUJE CHUJEM CHUJU CHUJC CHUJK CHUJO CHUJS CHUJA CHUJE CHUJÓW
+      KURWA KURWY KURWĘ KURWĄ KURWIE KURWOM KURWAMI KURWACH KURWIS KURWIĆ KURWI
+      KURWOL KURWAS KURWEX KURWIA KURWIO KURWIZ
+      PIZDA PIZDY PIZDĘ PIZDĄ PIZDZ PIZDU PIZDEC PIZDOL PIZDOLE PIZDAMI PIZDACH
+      KUTAS KUTASA KUTASY KUTASEM KUTASIE KUTASIK KUTASOL KUTASÓW
+      CWEL CWELE CWELA CWELEM CWELOWI CWELOM CWELU CWELI CWELSKI CWELSTWO
+      ZJEB ZJEBA ZJEBY ZJEBEM ZJEBIE ZJEBKU ZJEBEK ZJEBANE ZJEBANY ZJEBANA
+      DEBIL DEBILA DEBILE DEBILEM DEBILU DEBILKA DEBILNY DEBILNA DEBILNE DEBILIZM
+      FRAJER FRAJERA FRAJERY FRAJEREM FRAJERZE FRAJERSKI FRAJERKA FRAJERZY
+      SZMATA SZMATY SZMATĘ SZMATĄ SZMACI SZMACIARZ SZMACIARA SZMATŁAWY
+      DUPA DUPY DUPĘ DUPĄ DUPO DUPSKO DUPCZY DUPCENIE DUPNĄĆ DUPAĆ DUPNIE
+      SRAKA SRAKI SRAKĘ SRAKĄ SRAKOWY SRAKOWA SRAKOWE SRAKOM SRAKAMI
+      WPIERDOL WPIERDOLU WPIERDOLIĆ WPIERDOLĄ WPIERDALA WPIERDOLIŁ
+      SKURWOL SKURWIEL SKURWIELE SKURWIELA SKURWIELEM SKURWIELU SKURWYSYN
+      SKURWYSYNA SKURWYSYNY SKURWIONY SKURWIONA SKURWIONE SKURWIĆ SKURWIAŁY
+      PIERDOL PIERDOLI PIERDOLĘ PIERDOLIĆ PIERDOLIŁ PIERDOLIŁA PIERDOLONA
+      PIERDOLONY PIERDOLONE PIERDOLNIK PIERDOLNĄĆ PIERDOLNIĘTY PIERDOLNIĘTA
+      PIERDOLĘTO PIERDOLIĆ PIERDOLISZ PIERDOLIMY PIERDOLĄ PIERDOLIŁEM
+      JEB JEBAC JEBACZ JEBANA JEBANE JEBANI JEBANY JEBANIE JEBANKO JEBANKA
+      JEBIE JEBIĘ JEBIEMY JEBIESZ JEBIĄ JEBIOL JEBNĄĆ JEBNIE JEBNĄŁ JEBNĘŁA
+      JEBNĘLI JEBNIĘTY JEBNIĘTA JEBNIĘTE JEBNIĘCI JEBNIĘCIE JEBNIĘCIA
+      JEBNIK JEBNĄŁ JEBNĘŁO JEBNĘŁY JEBNĘŁEM JEBNĘŁAŚ JEBNĄŁEŚ JEBNĄŁBY
+      JEBANEK JEBACZKA JEBACZEM JEBALNIA JEBALNIK JEBANYMI JEBANYCH
+      PIERD PIERDA PIERDY PIERDEM PIERDĘ PIERDZI PIERDZĘ PIERDZISZ PIERDZIĆ
+      PIERDOLI PIERDOLĘ PIERDOLIĆ PIERDNĄĆ PIERDNIĘ PIERDNIĘCIE PIERDZIEL
+      PIERDZIELI PIERDZIELĘ PIERDZIELIĆ PIERDZIOSZEK PIERDZIAWKA PIERDZIAŁ
+      PIERDZIAŁA PIERDZIAŁO PIERDZIELĄ PIERDZIELONY
+      GÓWNO GÓWNA GÓWNY GÓWNEM GÓWNIE GÓWNIAK GÓWNIARZ GÓWNIARA GÓWNIAKI
+      GÓWNIANY GÓWNIANA GÓWNIANE GÓWNIARSKI GÓWNIARSTWO GÓWNIARZE
+      SRACZ SRACZA SRACZE SRACZEM SRACZU SRACZKA SRACZKI SRACZKĘ SRACZKĄ
+      SRACZYSKO SRACZOWY SRACZOWA SRACZOWE SRANIE SRANIA SRANIU SRALI SRASZ
+      SRAĆ SRAŁ SRAŁA SRAŁO SRAŁY SRAJ SRAJCZY SRAJCZYK SRAJĄ SRAJĄCY
+      ZASRANIEC ZASRAJ ZASRAŁ ZASRAŁA ZASRANY ZASRANA ZASRANE ZASRANI
+      ZASRANIEC ZASRANIE ZASRAŃCEM ZASRAŃCU ZASRAŃCY ZASRANYMI ZASRANYCH
+      OSRAĆ OSRAŁ OSRAŁA OSRANY OSRANA OSRANE OSRANI OBSRAĆ OBSRAŁ OBSRANY
+      OBSRANA OBSRANE OBSRANI OBSRANIEC OBSRAŃCEM OBSRAŃCU
+      MENDa MENDA MENDY MENDĘ MENDĄ MENDZIE MENDZIARZ MENDZIARA MENDOWATY
+      ŚCIERWO ŚCIERWA ŚCIERWEM ŚCIERWIE ŚCIERWUS ŚCIERWUSY ŚCIERWISKO
+      SZCZUR SZCZURA SZCZURY SZCZUREM SZCZURZE SZCZURAS SZCZURZYCA SZCZURAMI
+      PAJAC PAJACA PAJACE PAJACEM PAJACU PAJACOWA PAJACOWY PAJACOWE
+      PALANT PALANTA PALANTY PALANTEM PALANCIE PALANTOWY PALANTKA
+      DEBIL DEBILEM DEBILE DEBILKA DEBILKI DEBILU DEBILNE DEBILNY
+      IDIOTA IDIOTY IDIOTĘ IDIOTĄ IDIOTO IDIOTÓW IDIOTKA IDIOTKI IDIOTYZM
+      GŁUPEK GŁUPKA GŁUPKI GŁUPKIEM GŁUPOL GŁUPOLA GŁUPIE GŁUPI GŁUPIA GŁUPIĄ
+      GŁUPIM GŁUPIO GŁUPOTA GŁUPOTY GŁUPOTĘ GŁUPOTĄ GŁUPAWY GŁUPAWA GŁUPAWI
+      TĘPAK TĘPAKA TĘPAKI TĘPAKIEM TĘPAKU TĘPACTWO TĘPACTWA TĘPOTA TĘPOLE
+      BARAN BARANA BARANY BARANEM BARANIE BARANI BARANIĘ BARANINA BARANAMI
+      OSIOŁ OSŁA OSŁY OSŁEM OSŁOWI OSŁOM OSŁACH OSŁOWATY OSŁOWATA OSŁOWATE
+      CIPA CIPY CIPĘ CIPĄ CIPIE CIPS CIPO CIPI CIPAL CIPAŁ CIPAŁA CIPOWATY
+      PINDOL PINDOLA PINDOLE PINDOLEM PINDOLI PINDOLKA PINDOLEK PINDOLU
+      PINDZIA PINDZI PINDZIE PINDZIARA PINDZIARY PINDZIARĄ PINDZIARZ
+      LAMUS LAMUSA LAMUSY LAMUSEM LAMUSIE LAMUSKA LAMUSKI LAMERSKI LAMER
+      LAMERA LAMERZY LAMERKA LAMEREM LAMERSTWO
+      FRAJ FRAJER FRAJERKA FRAJEREM FRAJERZY FRAJERSKI FRAJERSKA FRAJERSKIE
+      PAŁA PAŁY PAŁĘ PAŁĄ PAŁECZKA PAŁECZKI PAŁOWAĆ PAŁUJE PAŁUJĘ PAŁUJ
+      PAŁANT PAŁANTA PAŁANTY PAŁANTEM PAŁANCIE PAŁANTKA PAŁANTKI
+      KMIOT KMIOTA KMIOTY KMIOTEM KMIOTKU KMIOTKI KMIOTOWATY KMIOTOWATA
+      KMIOTOWATE KMIOTAMI
+      CHAM CHAMA CHAMY CHAMEM CHAMIE CHAMSKI CHAMSKA CHAMSKIE CHAMSTWO
+      CHAMSTWA CHAMIDŁO CHAMIDŁA CHAMIDŁEM CHAMSKO CHAMIEJ CHAMOWATY
+      GNOJ GNOJA GNOJE GNOJEM GNOJU GNOJEK GNOJKA GNOJKI GNOJOWY GNOJOWA
+      GNOJÓWKA GNOJÓWKI GNOJARZ GNOJARA GNOJARZE
+      GÓWNIARZ GÓWNIARZA GÓWNIARZE GÓWNIARZEM GÓWNIARSTWO GÓWNIARSKI
+      SZMATA SZMATY SZMACIARA SZMACIARZ SZMATOL SZMATOLI SZMATOWA SZMATOWY
+      SZMATAŁ SZMATŁAWIEC SZMATŁAWCA SZMATŁAWCE SZMATŁAWY SZMATŁAWA
+      RYJ RYJA RYJE RYJEM RYJU RYJEK RYJKA RYJKI RYJÓWKA RYJOWATY RYJOWATA
+      MORDa MORDA MORDY MORDĘ MORDĄ MORDEM MORDZIE MORDAK MORDZIATY MORDOWY
+      GĘBA GĘBY GĘBĘ GĘBĄ GĘBOL GĘBOLA GĘBOWY GĘBOWA GĘBOWE
+      SKNERA SKNERY SKNERĘ SKNERĄ SKNERO SKNERSTWO SKNERAŻ SKĄPIEC SKĄPCA
+      SKĄPCE SKĄPCEM SKĄPCU SKĄPSTWO SKĄPY SKĄPA SKĄPE SKĄPO
+      ŚWIR ŚWIRA ŚWIRY ŚWIREM ŚWIRZE ŚWIRKA ŚWIRKI ŚWIRU ŚWIRNIĘTY ŚWIRNIĘTA
+      ŚWIRNIĘTE ŚWIRNIĘCI ŚWIRNIĘCIE
+      PSYCHOL PSYCHOLA PSYCHOLE PSYCHOLEM PSYCHOLKA PSYCHOLKI PSYCHOLU
+      PSYCHOLKA PSYCHOLSKI PSYCHOPATA PSYCHOPATY PSYCHOPATĘ PSYCHOPATĄ
+      PSYCHOPACI PSYCHOPATKA PSYCHOPATKI PSYCHOPATEM
+      DEBILNY DEBILNA DEBILNE DEBILNI DEBILNIE DEBILIZM DEBILSTWO
+      KRETYN KRETYNA KRETYNEM KRETYNIE KRETYNKA KRETYNKI KRETYNKIEM KRETYNIZM
+      KRETYNOWATY KRETYNOWATA KRETYNOWATE KRETYNOWACI
+      IDIOTYCZNY IDIOTYCZNA IDIOTYCZNE IDIOTYCZNIE IDIOTYZM IDIOTKA IDIOTKI
+      IMBECYL IMBECYLA IMBECYLE IMBECYLEM IMBECYLKA IMBECYLKI IMBECYLIZM
+      MATOL MATOLA MATOLI MATOLSTWO MATOLSKI MATOLSKA MATOLSKIE
+      GNOJEK GNOJKA GNOJKI GNOJEM GNOJOWY GNOJOWA GNOJOWE GNOJOWISKO
+      DUPOL DUPOLA DUPOLKI DUPOLKA DUPOLU DUPOLI DUPOLAMI DUPOLACH
+      PIZDOL PIZDOLA PIZDOLE PIZDOLEM PIZDOLI PIZDOLU PIZDOLKA PIZDÓWA
+      KURWIK KURWIKA KURWIKI KURWIKIEM KURWIZM KURWIZMU KURWIZMY KURWIARZ
+      KURWIARA KURWIARZE KURWIARSKI KURWIARSTWO KURWISKO KURWISKA KURWISKIEM
+      JEBANIEC JEBANCA JEBANIE JEBANE JEBANY JEBANA JEBANI JEBANIEC
+      JEBACZ JEBACZA JEBACZE JEBACZEM JEBACZU JEBACZKA JEBACZKI
+      WYJEB WYJEBA WYJEBY WYJEBEM WYJEBIE WYJEBKA WYJEBKI WYJEBANY WYJEBANA
+      WYJEBANE WYJEBALI WYJEBALIŚ WYJEBALIŚMY WYJEBALIŚCIE WYJEBIĘ WYJEBIESZ
+      ZAJEB ZAJEBIŚCIE ZAJEBISTY ZAJEBISTA ZAJEBISTE ZAJEBIŚCI ZAJEBIŚCIE
+      ZAJEBANY ZAJEBANA ZAJEBANE ZAJEBIOL ZAJEBKA ZAJEBKI ZAJEBISTOŚĆ
+      ODJEB ODJEBIE ODJEBIĘ ODJEBIESZ ODJEBANY ODJEBANA ODJEBANE ODJEBALI
+      DOJEB DOJEBIE DOJEBIĘ DOJEBIESZ DOJEBANY DOJEBANA DOJEBANE DOJEBALI
+      NAJEB NAJEBAĆ NAJEBIE NAJEBIĘ NAJEBIESZ NAJEBANY NAJEBANA NAJEBANE
+      NAPIERDOL NAPIERDOLI NAPIERDOLĘ NAPIERDOLIĆ NAPIERDOLONY NAPIERDOLONA
+      WPIERDALA WPIERDALAM WPIERDALASZ WPIERDALAĆ WPIERDOLONY WPIERDOLONA
+      SPERDOL SPERDOLIĆ SPERDOLIŁ SPERDOLIŁA SPERDOLONY SPERDOLONA SPERDOLONE
+      OSPERDOL OSPERDOLIĆ OSPERDOLIŁ OSPERDOLONY OSPERDOLONA
+      ROZPIERDOL ROZPIERDOLIĆ ROZPIERDOLIŁ ROZPIERDOLONY ROZPIERDOLONA
+      KUTAFON KUTAFONA KUTAFONY KUTAFONEM KUTAFONIE KUTAFONKA KUTAFONKI
+      KUTACZ KUTACZA KUTACZE KUTACZEM KUTACZU KUTACZKA
+      CHUJOWY CHUJOWA CHUJOWE CHUJOWI CHUJOWIE CHUJOWO CHUJOSTWO CHUJOSTWA
+      CHUJOWIZM CHUJNIA CHUJNI CHUJNIĘ CHUJNIĄ CHUJAS CHUJASA CHUJASY
+      CHUJASZEK CHUJASZKA CHUJASZKI CHUJASAMI CHUJASÓW CHUJOWATO CHUJOWATOŚĆ
+      KURWICA KURWICY KURWICĘ KURWICĄ KURWICOM KURWICAMI KURWICACH
+      KURWIDOŁEK KURWIDOŁKA KURWIDOŁKI KURWIDOŁKIEM KURWIDOŁKU
+      PIZDZI PIZDZĘ PIZDZISZ PIZDZIĆ PIZDZIŁ PIZDZIŁA PIZDZIŁO PIZDZIŁY
+      PIZDOWATY PIZDOWATA PIZDOWATE PIZDOWACI PIZDOWATO PIZDOWATOŚĆ
+      DUPC DUPCA DUPCE DUPCEM DUPCU DUPCĘ DUPCĄ DUPCZĘ DUPCZYSZ DUPCZYĆ
+      DUPCZYŁ DUPCZYŁA DUPCZYLI DUPCZONY DUPCZONA DUPCZONE
+      ŚWINTUCH ŚWINTUCHA ŚWINTUCHY ŚWINTUCHEM ŚWINTUSZYĆ ŚWINTUSZY
+      OBLEŚNIAK OBLEŚNIAKA OBLEŚNIAKI OBLEŚNIAKIEM OBLEŚNIACTWO
+      OBCIACH OBCIACHA OBCIACHY OBCIACHEM OBCIACHOWY OBCIACHOWA OBCIACHOWE
+      ŻUL ŻULA ŻULE ŻULEM ŻULU ŻULKA ŻULKI ŻULOWATY ŻULOWATA ŻULOWATE ŻULOSTWO
+      MENEL MENELA MENELE MENELEM MENELKA MENELKI MENELSTWO MENELSKI
+      OCHLAJ OCHLAJA OCHLAJE OCHLAJEM OCHLAJOWY OCHLAJSTWO OCHLAJOWA
+      OCHLEJ OCHLEJA OCHLEJE OCHLEJEM OCHLEJSTWO OCHLEJOWY
+      PIJAK PIJAKA PIJAKI PIJAKIEM PIJAKU PIJACZEK PIJACZKA PIJACZKI PIJACZY
+      PIJACZYNA PIJACZYNY PIJACZYSKO PIJACZYSKA PIJACKI PIJACKA PIJACKIE
+      ĆWOK ĆWOKA ĆWOKI ĆWOKIEM ĆWOKU ĆWOKIEM ĆWOKOWATY ĆWOKOWATA
+      ŁAJZA ŁAJZY ŁAJZĘ ŁAJZĄ ŁAJZO ŁAJZOWATY ŁAJZOWATA ŁAJZOWATE
+      ŁACH ŁACHA ŁACHY ŁACHEM ŁACHMAN ŁACHMANA ŁACHMANY ŁACHMANIARZ
+      PARCH PARCHA PARCHY PARCHEM PARCHU PARCHATY PARCHATA PARCHATE
+      ŚWINIA ŚWINI ŚWINIĘ ŚWINIĄ ŚWINIO ŚWINIE ŚWINIARZ ŚWINIARA ŚWINIARZE
+      ŚWINIOWATY ŚWINIOWATA ŚWINIOWATE ŚWINIOWO ŚWINIARSKI ŚWINIARSTWO
+      KABOTYN KABOTYNA KABOTYNY KABOTYNEM KABOTYNIE KABOTYNKA
+      DUREŃ DURNIA DURNIE DURNIEM DURNIU DURNY DURNA DURNE DURNOTA DURNOTY
+      GŁĄB GŁĄBA GŁĄBY GŁĄBEM GŁĄBIE GŁĄBIARZ GŁĄBIARA GŁĄBIARZE
+      GŁUPO GŁUPKU GŁUPKIEM GŁUPKOWATY GŁUPKOWATA GŁUPKOWATE GŁUPKOWATO
+      FLEJTUCH FLEJTUCHEM FLEJTUCHY FLEJTUCHOWY FLEJTUCHOWA FLEJTUCHOWE
+      BRUDAS BRUDASA BRUDASY BRUDASEM BRUDASIE BRUDASKA BRUDASKI BRUDZIARZ
+      SMARKACZ SMARKACZA SMARKACZE SMARKACZEM SMARKACZKA SMARKACZKI
+      BUC BUBA BUCA BUCE BUCEM BUCU BUCEK BUCAJ BUCOWATY BUCOWATA BUCOWATE
+      PALANT PALANTEM PALANTY PALANTA PALANCIE PALANTOWY PALANTOWA PALANTOWE
+      PĘTAK PĘTAKA PĘTAKI PĘTAKIEM PĘTAKU PĘTACTWO PĘTAKOWATY
+      PRYMITYW PRYMITYWA PRYMITYWY PRYMITYWEM PRYMITYWNY PRYMITYWNA PRYMITYWNE
+      CEBULAK CEBULAKA CEBULAKI CEBULAKIEM CEBULAKU CEBULACTWO CEBULACKI
+      JANUSZ JANUSZA JANUSZE JANUSZEM JANUSZU JANUSZOWY JANUSZOWA JANUSZOWE
+      GRAŻYNA GRAŻYNY GRAŻYNĘ GRAŻYNĄ GRAŻYNOWY GRAŻYNOWA
+      KLAUN KLAUNA KLAUNY KLAUNEM KLAUNIE KLAUNOWATY KLAUNOWATA KLAUNOWE
+      TROLL TROLLA TROLLE TROLLEM TROLLU TROLLOWAĆ TROLLOWAŁ TROLLOWANIE
+      HEJTER HEJTERA HEJTERZY HEJTEREM HEJTERKA HEJTERKI HEJTERSTWO HEJT
+      LAMER LAMERA LAMERZY LAMEREM LAMERKA LAMERKI LAMERSKI LAMERSTWO
+      BUCU BUCA BUCEM BUCOWATY BUCOWATA BUCOWATE BUCOWATO
+    `.normalize("NFC").toUpperCase().split(/\s+/).filter(Boolean);
+
+    const unique = words => [...new Set(words)];
+    const chujWords = unique(DICT_CHUJLE.filter(word => Array.from(word).length === 4));
+    const cipleWords = unique(DICT_CIPLE.filter(word => {
+      const length = Array.from(word).length;
+      return length >= 4 && length <= 8;
+    }));
+    const chujSet = new Set(chujWords);
+    const letterCount = (a, b) => {
+      const left = Array.from(a);
+      const right = Array.from(b);
+      if (left.length !== right.length) return Infinity;
+      return left.reduce((count, char, index) => count + (char !== right[index] ? 1 : 0), 0);
+    };
+    function distancesFrom(target) {
+      const distance = new Map([[target, 0]]);
+      const queue = [target];
+      for (let cursor = 0; cursor < queue.length; cursor++) {
+        const current = queue[cursor];
+        for (const candidate of chujWords) {
+          if (!distance.has(candidate) && letterCount(current, candidate) === 1) {
+            distance.set(candidate, distance.get(current) + 1);
+            queue.push(candidate);
+          }
+        }
+      }
+      return distance;
+    }
+    const ladderDistances = distancesFrom("CHUJ");
+
+    const elements = {
+      tabbar: document.querySelector("#tabbar"),
+      tabChujle: document.querySelector("#tab-chujle"),
+      tabCiple: document.querySelector("#tab-ciple"),
+      panelChujle: document.querySelector("#panel-chujle"),
+      panelCiple: document.querySelector("#panel-ciple"),
+      heroTitle: document.querySelector("#hero-title"),
+      heroCopy: document.querySelector("#hero-copy"),
+      notice: document.querySelector("#notice"),
+      ladderTrack: document.querySelector("#ladder-track"),
+      ladderForm: document.querySelector("#ladder-form"),
+      ladderInput: document.querySelector("#ladder-input"),
+      ladderMessage: document.querySelector("#ladder-message"),
+      ladderStart: document.querySelector("#ladder-start"),
+      ladderOptimal: document.querySelector("#ladder-optimal"),
+      ladderSteps: document.querySelector("#ladder-steps"),
+      ladderKeyboard: document.querySelector("#ladder-keyboard"),
+      ladderRound: document.querySelector("#ladder-round"),
+      cipleBoard: document.querySelector("#ciple-board"),
+      cipleForm: document.querySelector("#ciple-form"),
+      cipleInput: document.querySelector("#ciple-input"),
+      cipleMessage: document.querySelector("#ciple-message"),
+      cipleKeyboard: document.querySelector("#ciple-keyboard"),
+      cipleLength: document.querySelector("#ciple-length"),
+      cipleInputLength: document.querySelector("#ciple-input-length"),
+      cipleAttempts: document.querySelector("#ciple-attempts"),
+      cipleRound: document.querySelector("#ciple-round")
+    };
+    let activeGame = "chujle";
+    let ladder = [];
+    let ladderOptimal = 0;
+    let ladderRound = 0;
+    let ladderFinished = false;
+    let cipleTarget = "";
+    let cipleGuesses = [];
+    let cipleRound = 0;
+    let cipleFinished = false;
+    let noticeTimer;
+    const keyboardLetters = ["QWERTYUIOPĄĘ", "ASDFGHJKLŃÓŚ", "ZXCVBNMĆŹŻ"];
+    const alphabet = new Set(Array.from("AĄBCĆDEĘFGHIJKLŁMNŃOÓPRSŚTUWYZŹŻ"));
+
+    function showNotice(message) {
+      elements.notice.textContent = message;
+      elements.notice.classList.add("show");
+      clearTimeout(noticeTimer);
+      noticeTimer = setTimeout(() => elements.notice.classList.remove("show"), 2100);
+    }
+    function setMessage(element, message, kind = "") {
+      element.textContent = message;
+      element.className = `helper-line${kind ? ` ${kind}` : ""}`;
+    }
+    function shake(element) {
+      element.classList.remove("shake");
+      void element.offsetWidth;
+      element.classList.add("shake");
+      setTimeout(() => element.classList.remove("shake"), 400);
+    }
+    function switchGame(game) {
+      activeGame = game;
+      const chujle = game === "chujle";
+      elements.tabbar.dataset.active = game;
+      elements.tabChujle.setAttribute("aria-selected", String(chujle));
+      elements.tabCiple.setAttribute("aria-selected", String(!chujle));
+      elements.panelChujle.classList.toggle("active", chujle);
+      elements.panelChujle.hidden = !chujle;
+      elements.panelCiple.classList.toggle("active", !chujle);
+      elements.panelCiple.hidden = chujle;
+      elements.heroTitle.textContent = chujle ? "CHUJLE" : "CIPLE";
+      elements.heroCopy.textContent = chujle
+        ? "Przeskakuj po słowach. Jedna litera na raz."
+        : "Sześć prób. Zgadnij hasło, rozszyfruj kolory.";
+      (chujle ? elements.ladderInput : elements.cipleInput).focus({ preventScroll: true });
+    }
+    elements.tabChujle.addEventListener("click", () => switchGame("chujle"));
+    elements.tabCiple.addEventListener("click", () => switchGame("ciple"));
+
+    function drawLadder() {
+      elements.ladderTrack.replaceChildren();
+      ladder.forEach((word, index) => {
+        if (index > 0) {
+          const arrow = document.createElement("span");
+          arrow.className = "ladder-arrow";
+          arrow.textContent = "↓";
+          arrow.setAttribute("aria-hidden", "true");
+          elements.ladderTrack.append(arrow);
+        }
+        const row = document.createElement("div");
+        row.className = `ladder-word${index === 0 ? " start" : ""}${index === ladder.length - 1 && ladderFinished ? " solved" : ""}${index === ladder.length - 1 && !ladderFinished ? " current" : ""}`;
+        row.style.animationDelay = `${Math.min(index * 28, 180)}ms`;
+        row.setAttribute("aria-label", word.split("").join(" "));
+        for (const letter of Array.from(word)) {
+          const tile = document.createElement("span");
+          tile.className = "tile";
+          tile.textContent = letter;
+          row.append(tile);
+        }
+        elements.ladderTrack.append(row);
+      });
+      elements.ladderSteps.textContent = String(Math.max(0, ladder.length - 1));
+      elements.ladderInput.disabled = ladderFinished;
+      elements.ladderForm.querySelector("button[type=submit]").disabled = ladderFinished;
+      elements.ladderInput.value = "";
+    }
+    function newLadderRound() {
+      const starts = [...ladderDistances.entries()]
+        .filter(([word, distance]) => word !== "CHUJ" && distance >= 3 && distance <= 6 && chujSet.has(word))
+        .map(([word]) => word);
+      if (!starts.length) {
+        throw new Error("Słownik CHUJLE nie zawiera słów startowych połączonych z CHUJ w 3–6 krokach.");
+      }
+      const start = starts[Math.floor(Math.random() * starts.length)];
+      ladderRound++;
+      ladder = [start];
+      ladderOptimal = ladderDistances.get(start);
+      ladderFinished = false;
+      elements.ladderStart.textContent = start;
+      elements.ladderOptimal.textContent = `${ladderOptimal} ${ladderOptimal === 1 ? "krok" : "kroki"}`;
+      elements.ladderRound.textContent = `RUNDA ${String(ladderRound).padStart(2, "0")}`;
+      setMessage(elements.ladderMessage, "Wpisz słowo, które różni się jedną literą.");
+      drawLadder();
+      elements.ladderInput.focus({ preventScroll: true });
+    }
+    function submitLadderWord(word) {
+      const normalized = word.normalize("NFC").toLocaleUpperCase("pl-PL");
+      if (Array.from(normalized).length !== 4) {
+        setMessage(elements.ladderMessage, "Wpisz dokładnie 4 litery.", "error");
+        shake(elements.ladderForm);
+        return;
+      }
+      if (!chujSet.has(normalized)) {
+        setMessage(elements.ladderMessage, "Tego słowa nie ma w słowniku CHUJLE.", "error");
+        shake(elements.ladderForm);
+        return;
+      }
+      const current = ladder[ladder.length - 1];
+      if (letterCount(current, normalized) !== 1) {
+        setMessage(elements.ladderMessage, "Zmień dokładnie jedną literę.", "error");
+        shake(elements.ladderForm);
+        return;
+      }
+      ladder.push(normalized);
+      if (normalized === "CHUJ") {
+        ladderFinished = true;
+        setMessage(elements.ladderMessage, `Brawo! Dotarłeś do CHUJ w ${ladder.length - 1} krokach.`, "success");
+        showNotice("Drabinka zaliczona. Piękny ciąg słów.");
+      } else {
+        const remaining = ladderDistances.get(normalized);
+        const message = remaining === undefined
+          ? "Dobre słowo. Ta odnoga nie prowadzi do celu — wróć albo zmień trasę."
+          : `Dobre słowo! Optymalnie do celu: ${remaining} ${remaining === 1 ? "krok" : "kroki"}.`;
+        setMessage(elements.ladderMessage, message, remaining === undefined ? "error" : "success");
+      }
+      drawLadder();
+    }
+    elements.ladderForm.addEventListener("submit", event => {
+      event.preventDefault();
+      if (!ladderFinished) submitLadderWord(elements.ladderInput.value.trim());
+    });
+    document.querySelector("#ladder-new").addEventListener("click", newLadderRound);
+    document.querySelector("#ladder-hint").addEventListener("click", () => {
+      if (ladderFinished) return showNotice("Zacznij nową rundę, aby skorzystać z podpowiedzi.");
+      const current = ladder[ladder.length - 1];
+      const distance = ladderDistances.get(current);
+      if (distance === undefined) return showNotice("Ta odnoga nie prowadzi do celu — wróć do poprzedniego słowa.");
+      const next = chujWords.find(word => ladderDistances.get(word) === distance - 1 && letterCount(current, word) === 1);
+      if (next) showNotice(`Jednym z dobrych kolejnych kroków jest: ${next}`);
+    });
+
+    function buildKeyboard(container, game) {
+      container.replaceChildren();
+      keyboardLetters.forEach(line => {
+        const row = document.createElement("div");
+        row.className = "key-row";
+        for (const letter of Array.from(line)) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "key";
+          button.textContent = letter;
+          button.dataset.letter = letter;
+          button.addEventListener("click", () => inputLetter(game, letter));
+          row.append(button);
+        }
+        container.append(row);
+      });
+      const actionRow = document.createElement("div");
+      actionRow.className = "key-row";
+      const enter = document.createElement("button");
+      enter.type = "button";
+      enter.className = "key wide";
+      enter.textContent = "ENTER";
+      enter.addEventListener("click", () => game === "chujle" ? elements.ladderForm.requestSubmit() : elements.cipleForm.requestSubmit());
+      const backspace = document.createElement("button");
+      backspace.type = "button";
+      backspace.className = "key wide";
+      backspace.textContent = "⌫";
+      backspace.setAttribute("aria-label", "Backspace");
+      backspace.addEventListener("click", () => inputLetter(game, "BACKSPACE"));
+      actionRow.append(enter, backspace);
+      container.append(actionRow);
+    }
+    function inputLetter(game, letter) {
+      const input = game === "chujle" ? elements.ladderInput : elements.cipleInput;
+      const limit = game === "chujle" ? 4 : Array.from(cipleTarget).length;
+      if (input.disabled || (game === "ciple" && cipleFinished)) return;
+      if (letter === "BACKSPACE") input.value = Array.from(input.value).slice(0, -1).join("");
+      else if (Array.from(input.value).length < limit) input.value += letter;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.focus({ preventScroll: true });
+    }
+    buildKeyboard(elements.ladderKeyboard, "chujle");
+    buildKeyboard(elements.cipleKeyboard, "ciple");
+
+    function gradeGuess(guess, target) {
+      const result = Array.from({ length: target.length }, () => "absent");
+      const remaining = Array.from(target);
+      const chars = Array.from(guess);
+      for (let i = 0; i < chars.length; i++) {
+        if (chars[i] === remaining[i]) {
+          result[i] = "correct";
+          remaining[i] = null;
+        }
+      }
+      for (let i = 0; i < chars.length; i++) {
+        if (result[i] === "correct") continue;
+        const found = remaining.indexOf(chars[i]);
+        if (found !== -1) {
+          result[i] = "present";
+          remaining[found] = null;
+        }
+      }
+      return result;
+    }
+    function keyboardStatus() {
+      const status = new Map();
+      cipleGuesses.forEach(guess => {
+        const grades = gradeGuess(guess, cipleTarget);
+        Array.from(guess).forEach((letter, index) => {
+          const old = status.get(letter);
+          const next = grades[index];
+          if (next === "correct" || (next === "present" && old !== "correct") || !old) status.set(letter, next);
+        });
+      });
+      return status;
+    }
+    function drawCiple(revealLast = false) {
+      const length = Array.from(cipleTarget).length;
+      elements.cipleBoard.replaceChildren();
+      for (let rowIndex = 0; rowIndex < 6; rowIndex++) {
+        const row = document.createElement("div");
+        row.className = "guess-row";
+        const guess = cipleGuesses[rowIndex] || "";
+        const chars = Array.from(guess);
+        const grades = rowIndex < cipleGuesses.length ? gradeGuess(guess, cipleTarget) : [];
+        for (let col = 0; col < length; col++) {
+          const tile = document.createElement("div");
+          tile.className = `guess-tile${chars[col] ? " filled" : ""}`;
+          tile.textContent = chars[col] || "";
+          tile.setAttribute("aria-label", chars[col] || "puste");
+          if (rowIndex < cipleGuesses.length) {
+            if (revealLast && rowIndex === cipleGuesses.length - 1) {
+              tile.classList.add("reveal");
+              tile.style.transitionDelay = `${col * 95}ms`;
+              setTimeout(() => tile.classList.add(grades[col]), col * 95 + 40);
+            } else tile.classList.add(grades[col]);
+          }
+          row.append(tile);
+        }
+        elements.cipleBoard.append(row);
+      }
+      elements.cipleAttempts.textContent = `Próba ${Math.min(cipleGuesses.length + 1, 6)} z 6`;
+      const statuses = keyboardStatus();
+      elements.cipleKeyboard.querySelectorAll(".key[data-letter]").forEach(key => {
+        key.classList.remove("green", "yellow", "gray");
+        const value = statuses.get(key.dataset.letter);
+        if (value) key.classList.add(value);
+      });
+    }
+    function newCipleRound() {
+      if (!cipleWords.length) throw new Error("Słownik CIPLE nie zawiera słów o długości 4–8 liter.");
+      cipleTarget = cipleWords[Math.floor(Math.random() * cipleWords.length)];
+      cipleGuesses = [];
+      cipleRound++;
+      cipleFinished = false;
+      elements.cipleLength.textContent = `Hasło: ${Array.from(cipleTarget).length} liter`;
+      elements.cipleInputLength.textContent = `${Array.from(cipleTarget).length} liter`;
+      elements.cipleInput.maxLength = Array.from(cipleTarget).length;
+      elements.cipleInput.value = "";
+      elements.cipleInput.disabled = false;
+      elements.cipleForm.querySelector("button[type=submit]").disabled = false;
+      elements.cipleRound.textContent = `RUNDA ${String(cipleRound).padStart(2, "0")}`;
+      setMessage(elements.cipleMessage, "Możesz wpisać dowolne słowo o właściwej długości.");
+      drawCiple();
+      elements.cipleInput.focus({ preventScroll: true });
+    }
+    elements.cipleInput.addEventListener("input", () => {
+      const max = Array.from(cipleTarget).length;
+      elements.cipleInput.value = Array.from(elements.cipleInput.value.normalize("NFC").toLocaleUpperCase("pl-PL")).slice(0, max).join("");
+      const row = elements.cipleBoard.children[cipleGuesses.length];
+      if (!row) return;
+      Array.from(row.children).forEach((tile, index) => {
+        tile.textContent = Array.from(elements.cipleInput.value)[index] || "";
+        tile.classList.toggle("filled", Boolean(tile.textContent));
+      });
+    });
+    elements.cipleForm.addEventListener("submit", event => {
+      event.preventDefault();
+      if (cipleFinished) return;
+      const guess = elements.cipleInput.value.normalize("NFC").toLocaleUpperCase("pl-PL");
+      if (Array.from(guess).length !== Array.from(cipleTarget).length) {
+        setMessage(elements.cipleMessage, `Wpisz dokładnie ${Array.from(cipleTarget).length} liter.`, "error");
+        shake(elements.cipleBoard);
+        return;
+      }
+      cipleGuesses.push(guess);
+      const won = guess === cipleTarget;
+      drawCiple(true);
+      elements.cipleInput.value = "";
+      if (won) {
+        cipleFinished = true;
+        setMessage(elements.cipleMessage, `Jest! Hasło to ${cipleTarget}.`, "success");
+        showNotice("Trafione. Aż miło patrzeć.");
+      } else if (cipleGuesses.length === 6) {
+        cipleFinished = true;
+        setMessage(elements.cipleMessage, `Koniec prób. Hasło: ${cipleTarget}.`, "error");
+        showNotice(`Hasło brzmiało: ${cipleTarget}`);
+      } else {
+        setMessage(elements.cipleMessage, "Dobra próba. Sprawdź kolory i zgaduj dalej.");
+      }
+      if (cipleFinished) {
+        elements.cipleInput.disabled = true;
+        elements.cipleForm.querySelector("button[type=submit]").disabled = true;
+      }
+    });
+    document.querySelector("#ciple-new").addEventListener("click", newCipleRound);
+
+    elements.ladderInput.addEventListener("input", () => {
+      const normalized = elements.ladderInput.value.normalize("NFC").toLocaleUpperCase("pl-PL");
+      elements.ladderInput.value = Array.from(normalized).slice(0, 4).join("");
+    });
+    document.addEventListener("keydown", event => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+      const input = activeGame === "chujle" ? elements.ladderInput : elements.cipleInput;
+      if (event.key === "Enter") {
+        event.preventDefault();
+        (activeGame === "chujle" ? elements.ladderForm : elements.cipleForm).requestSubmit();
+      } else if (event.key === "Backspace" && document.activeElement !== input) {
+        event.preventDefault();
+        inputLetter(activeGame, "BACKSPACE");
+      } else if (Array.from(event.key).length === 1) {
+        const letter = event.key.normalize("NFC").toLocaleUpperCase("pl-PL");
+        if (alphabet.has(letter) && document.activeElement !== input) {
+          event.preventDefault();
+          inputLetter(activeGame, letter);
+        }
+      }
+    });
+    document.querySelectorAll(".tab, .action-button, .key").forEach(button => {
+      button.addEventListener("pointerdown", () => button.classList.add("pressed"));
+      button.addEventListener("pointerup", () => button.classList.remove("pressed"));
+      button.addEventListener("pointerleave", () => button.classList.remove("pressed"));
+    });
+
+    if (chujWords.length < 300 || chujWords.length > 450) {
+      console.warn(`Słownik CHUJLE zawiera ${chujWords.length} unikalnych słów 4-literowych.`);
+    }
+    if (cipleWords.length < 150) {
+      console.warn(`Słownik CIPLE zawiera tylko ${cipleWords.length} unikalnych słów 4–8-literowych.`);
+    }
+    newLadderRound();
+    newCipleRound();
+  </script>
+</body>
+</html>
