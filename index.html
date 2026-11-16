@@ -206,8 +206,16 @@
       left: 25%;
       width: 50%;
       height: 14px;
+      overflow: hidden;
       border: 2px solid #755d46;
       background: linear-gradient(90deg, #9dc1b5 0 42%, #5d6860 42% 56%, #9dc1b5 56%);
+      image-rendering: pixelated;
+    }
+    .vehicle-photo {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
       image-rendering: pixelated;
     }
     .photo-item.blue { background: #668f99; }
@@ -1321,6 +1329,22 @@
       button.addEventListener("pointerleave", () => button.classList.remove("pressed"));
     });
 
+    const vehiclePhotos = [
+      "Zrzut ekranu 2026-11-16 230919.png",
+      "Zrzut ekranu 2026-11-16 230941.png",
+      "Zrzut ekranu 2026-11-16 230948.png",
+      "Zrzut ekranu 2026-11-16 231015.png",
+      "Zrzut ekranu 2026-11-16 231023.png",
+      "Zrzut ekranu 2026-11-16 231034.png",
+      "Zrzut ekranu 2026-11-16 231125.png",
+      "Zrzut ekranu 2026-11-16 231132.png",
+      "Zrzut ekranu 2026-11-16 231142.png",
+      "Zrzut ekranu 2026-11-16 231151.png",
+      "Zrzut ekranu 2026-08-19 001259.png",
+      "Zrzut ekranu 2026-08-25 185005.png",
+      "Zrzut ekranu 2026-06-09 204955.png",
+      "Zrzut ekranu 2026-07-26 210753.png"
+    ];
     const trafficRoutes = [
       { id: "route-main-east", count: 2, duration: 58000, color: "blue" },
       { id: "route-main-west", count: 1, duration: 64000, color: "red" },
@@ -1336,10 +1360,13 @@
       { id: "route-tram-west", duration: 88000, offset: .5 }
     ];
 
-    function buildPhotoVehicle(routeId, className, color, duration, startOffset) {
+    function buildPhotoVehicle(routeId, className, color, duration, startOffset, photoIndex) {
       const route = document.querySelector(`#${routeId}`);
       if (!route) throw new Error(`Nie znaleziono trasy pojazdu: ${routeId}`);
       const routeLength = route.getTotalLength();
+      const photo = document.createElement("img");
+      photo.className = "vehicle-photo";
+      photo.alt = "";
       const item = document.createElement("div");
       item.className = `${className}${color ? ` ${color}` : ""}`;
       for (let wheel = 0; wheel < 4; wheel++) {
@@ -1349,10 +1376,18 @@
       }
       const roof = document.createElement("span");
       roof.className = "vehicle-roof";
+      roof.append(photo);
       item.append(roof);
       document.querySelector("#photo-stream").append(item);
+      let previousLap = -1;
       const animation = () => {
-        const progress = (performance.now() / duration + startOffset) % 1;
+        const cycle = performance.now() / duration + startOffset;
+        const lap = Math.floor(cycle);
+        const progress = cycle % 1;
+        if (lap !== previousLap) {
+          photo.src = vehiclePhotos[(photoIndex + lap) % vehiclePhotos.length];
+          previousLap = lap;
+        }
         const distance = routeLength * progress;
         const position = route.getPointAtLength(distance);
         const ahead = route.getPointAtLength(Math.min(distance + .2, routeLength));
@@ -1366,17 +1401,19 @@
       return animation;
     }
 
+    let photoIndex = 0;
     const traffic = trafficRoutes.flatMap(({ id, count, duration, color }) =>
       Array.from({ length: count }, (_, index) => buildPhotoVehicle(
         id,
         "photo-item",
         color,
         duration,
-        (index + .5) / count
+        (index + .5) / count,
+        photoIndex++
       ))
     );
     tramRoutes.forEach(({ id, duration, offset }) => {
-      traffic.push(buildPhotoVehicle(id, "photo-item tram-item", "", duration, offset));
+      traffic.push(buildPhotoVehicle(id, "photo-item tram-item", "", duration, offset, photoIndex++));
     });
 
     function animateMapTraffic() {
